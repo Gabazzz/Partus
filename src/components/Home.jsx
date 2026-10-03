@@ -5,6 +5,7 @@ import { brl, fmtDia, monthStart } from '../lib/utils.js'
 import { Avatar, Card, Money, ease, fadeUp } from './ui.jsx'
 import FormGasto from './FormGasto.jsx'
 import Moradores from './Moradores.jsx'
+import BotaoInstalar from './BotaoInstalar.jsx'
 
 function Esqueleto() {
   return (
@@ -186,6 +187,7 @@ export default function Home({ eu, token, moradores, onSair, onExpirou, onMorado
               })}
             </motion.div>
           </AnimatePresence>
+          <div className="install-wrap"><BotaoInstalar /></div>
         </motion.div>
       )}
 

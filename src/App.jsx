@@ -5,6 +5,7 @@ import { store } from './lib/utils.js'
 import { Avatar, Btn, ease, fadeUp } from './components/ui.jsx'
 import { EsqueciSenha, SenhaAdmin } from './components/Auth.jsx'
 import Home from './components/Home.jsx'
+import BotaoInstalar from './components/BotaoInstalar.jsx'
 
 const tela = {
   initial: { opacity: 0, y: 16, filter: 'blur(6px)' },
@@ -113,6 +114,7 @@ export default function App() {
             </motion.button>
           ))}
         </motion.div>
+        <BotaoInstalar />
       </motion.div>
     )
   } else {

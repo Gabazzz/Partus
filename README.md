@@ -8,6 +8,19 @@ Webapp de controle de despesas compartilhadas da casa.
 - Admin gerencia moradores: criar, editar nome, foto e emoji, excluir
 - "Esqueci minha senha" do admin: código de 6 dígitos enviado por e-mail
 - Visual premium: tema escuro com dourado, números animados, transições suaves
+- Instalável (PWA): ícone na tela inicial, abre em tela cheia, visual disponível offline
+
+## Instalando no celular ou computador
+
+O app precisa estar publicado em **HTTPS** (Vercel, Netlify, Cloudflare Pages...). Em `localhost` o navegador também permite testar.
+
+1. Publique a pasta gerada por `npm run build` (`dist`), configurando as variáveis `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` no painel da hospedagem.
+2. Abra o endereço no celular:
+   - **Android (Chrome) e computador (Chrome/Edge):** toque em **Instalar app** na tela de perfis (ou no rodapé da tela inicial), ou use o menu do navegador.
+   - **iPhone (Safari):** toque em **Compartilhar → Adicionar à Tela de Início**. O botão **Instalar app** mostra o passo a passo.
+3. O app atualiza sozinho quando você publica uma nova versão.
+
+Só o visual fica salvo para uso offline; os lançamentos sempre vêm do Supabase, então precisam de internet.
 
 ## Rodando
 
