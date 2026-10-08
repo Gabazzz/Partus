@@ -181,6 +181,21 @@ button.row:hover { border-color: rgba(217, 180, 95, 0.4); background: var(--surf
 .money-field { position: relative; }
 .money-field span { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--gold-2); font-family: var(--display); font-size: 18px; }
 .money-field input.money { padding-left: 52px; font-family: var(--display); font-size: 30px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+
+/* ---------- Campo de valor com teclado próprio ---------- */
+.valor-pad { display: flex; flex-direction: column; gap: 14px; }
+.money-field.display { position: static; display: flex; align-items: baseline; justify-content: center; gap: 8px; padding: 18px 16px; }
+.money-field.display span:first-child { position: static; transform: none; }
+.money-field.display .money { font-family: var(--display); font-size: 34px; font-weight: 700; letter-spacing: -0.02em; color: var(--text); }
+.money-field.display .money .dec { font-size: 0.6em; color: var(--muted); font-weight: 500; }
+.keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.keypad button { height: 58px; border-radius: 16px; background: var(--surface); border: 1px solid var(--border); font-family: var(--display); font-size: 22px; font-weight: 600; transition: border-color 0.2s, background 0.2s; }
+.keypad button:active, .keypad button:hover { border-color: rgba(217, 180, 95, 0.5); background: var(--surface-2); }
+.keypad button.back { font-size: 19px; color: var(--danger); }
+.keypad span { visibility: hidden; }
+
+/* ---------- Copiar mensagem ---------- */
+.copy-msg { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; margin-top: 12px; padding: 13px; }
 .otp { text-align: center; font-family: var(--display); font-size: 30px; font-weight: 600; letter-spacing: 0.5em; padding-left: calc(16px + 0.5em) !important; font-variant-numeric: tabular-nums; }
 
 /* ---------- Instalar app ---------- */
@@ -227,6 +242,14 @@ button.row:hover { border-color: rgba(217, 180, 95, 0.4); background: var(--surf
   .hero .money-display { font-size: 38px; }
   .bar-row { grid-template-columns: 92px 1fr auto; }
 }
+@media (max-width: 420px) {
+  /* Evita que o nome do perfil + os botões do topo fiquem espremidos numa
+     tela estreita: quebra em duas linhas em vez de cortar algo. */
+  .top { flex-wrap: wrap; row-gap: 10px; }
+  .top-actions { width: 100%; justify-content: flex-end; }
+}
+.me strong { overflow-wrap: anywhere; }
+.person .info b { overflow-wrap: anywhere; }
 @media (prefers-reduced-motion: reduce) {
   .aurora i, .hero .shine, .fab::after, .pulse-bar, .sk { animation: none !important; }
 }

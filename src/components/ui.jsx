@@ -47,6 +47,47 @@ export function Money({ value, className = '', duration = 1.15 }) {
   )
 }
 
+/** Campo de valor com teclado numérico próprio — nunca abre o teclado nativo,
+ *  então a tela não é empurrada/cortada ao digitar (diferente de um <input>). */
+export function CampoValor({ centavos, onChange, autoFocus }) {
+  const partes = partesMoeda(centavos / 100)
+
+  function digitar(d) {
+    const max = 99999999 // R$ 999.999,99
+    const prox = centavos * 10 + d
+    onChange(prox > max ? centavos : prox)
+  }
+  function apagar() { onChange(Math.floor(centavos / 10)) }
+
+  useEffect(() => {
+    if (!autoFocus) return
+    const onKey = (e) => {
+      if (/^[0-9]$/.test(e.key)) digitar(Number(e.key))
+      else if (e.key === 'Backspace') apagar()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [centavos, autoFocus])
+
+  return (
+    <div className="valor-pad">
+      <div className="money-field display" role="textbox" aria-label="Valor">
+        <span>R$</span>
+        <span className="money tnum">{partes.inteiro}<span className="dec">{partes.centavos}</span></span>
+      </div>
+      <div className="keypad">
+        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => (
+          <motion.button key={d} type="button" whileTap={{ scale: 0.9 }} onClick={() => digitar(d)}>{d}</motion.button>
+        ))}
+        <span aria-hidden="true" />
+        <motion.button type="button" whileTap={{ scale: 0.9 }} className="zero" onClick={() => digitar(0)}>0</motion.button>
+        <motion.button type="button" whileTap={{ scale: 0.9 }} className="back" aria-label="Apagar" onClick={apagar}>⌫</motion.button>
+      </div>
+    </div>
+  )
+}
+
 /** Card de vidro com brilho que segue o cursor/dedo. */
 export function Card({ children, className = '', as = 'div', ...rest }) {
   const ref = useRef(null)

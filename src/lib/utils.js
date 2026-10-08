@@ -24,6 +24,35 @@ export const hojeISO = () => {
 
 export const brl = (n) => Number(n || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
+// Mensagem pronta pra mandar pra quem paga a outra parte da casa.
+export const mensagemCobranca = ({ nomeMes, total, parte }) =>
+  `Oi! Segue o resumo de ${nomeMes}:\n\n` +
+  `Total da casa: ${brl(total)}\n` +
+  `Sua parte (2/3): ${brl(parte)}\n\n` +
+  `Qualquer dúvida nos valores, me chama! 🙂`
+
+// Copia texto pro clipboard, com fallback pra navegadores/contexto sem permissão.
+export async function copiarTexto(texto) {
+  try {
+    await navigator.clipboard.writeText(texto)
+    return true
+  } catch {
+    try {
+      const el = document.createElement('textarea')
+      el.value = texto
+      el.style.position = 'fixed'
+      el.style.opacity = '0'
+      document.body.appendChild(el)
+      el.focus(); el.select()
+      const ok = document.execCommand('copy')
+      document.body.removeChild(el)
+      return ok
+    } catch {
+      return false
+    }
+  }
+}
+
 // Número no padrão pt-BR com 2 casas, separado em parte inteira e centavos.
 export const partesMoeda = (n) => {
   const s = Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })

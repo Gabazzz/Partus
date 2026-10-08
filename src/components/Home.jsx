@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { api } from '../api.js'
-import { brl, fmtDia, monthStart } from '../lib/utils.js'
+import { brl, copiarTexto, fmtDia, mensagemCobranca, monthStart } from '../lib/utils.js'
 import { Avatar, Card, Money, ease, fadeUp } from './ui.jsx'
 import FormGasto from './FormGasto.jsx'
 import Moradores from './Moradores.jsx'
@@ -81,6 +81,10 @@ export default function Home({ eu, token, moradores, onSair, onExpirou, onMorado
       carregar()
     } catch (e) { tratar(e) }
   }
+  async function copiarMensagem() {
+    const texto = mensagemCobranca({ nomeMes, total, parte: (total * 2) / 3 })
+    avisar((await copiarTexto(texto)) ? 'Mensagem copiada!' : 'Não consegui copiar automaticamente')
+  }
 
   return (
     <div className="app">
@@ -132,6 +136,9 @@ export default function Home({ eu, token, moradores, onSair, onExpirou, onMorado
                   <b><Money value={(total * 2) / 3} duration={1.3} /></b>
                 </Card>
               </div>
+              <motion.button type="button" className="chip gold copy-msg" variants={fadeUp} onClick={copiarMensagem}>
+                <span aria-hidden="true">⧉</span> Copiar mensagem pra sogra
+              </motion.button>
               {porMorador.length > 0 && (
                 <Card className="bars" variants={fadeUp}>
                   <small className="cap">Quem lançou</small>

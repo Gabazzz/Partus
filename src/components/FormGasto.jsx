@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { parseValor, hojeISO } from '../lib/utils.js'
-import { Btn, Sheet } from './ui.jsx'
+import { hojeISO } from '../lib/utils.js'
+import { Btn, CampoValor, Sheet } from './ui.jsx'
 
 export default function FormGasto({ titulo, inicial, comData, onFechar, onSalvar, onExcluir }) {
-  const [valor, setValor] = useState(inicial ? String(inicial.valor).replace('.', ',') : '')
+  const [centavos, setCentavos] = useState(inicial ? Math.round(Number(inicial.valor) * 100) : 0)
   const [item, setItem] = useState(inicial?.item || '')
   const [descricao, setDescricao] = useState(inicial?.descricao || '')
   const [data, setData] = useState(inicial?.data || hojeISO())
@@ -14,11 +14,10 @@ export default function FormGasto({ titulo, inicial, comData, onFechar, onSalvar
 
   async function enviar(e) {
     e.preventDefault()
-    const v = parseValor(valor)
-    if (!(v > 0)) return setErro('Informe um valor maior que zero')
+    if (!(centavos > 0)) return setErro('Informe um valor maior que zero')
     if (!item.trim()) return setErro('Informe o item')
     setBusy(true); setErro('')
-    try { await onSalvar({ valor: v, item, descricao, data }) }
+    try { await onSalvar({ valor: centavos / 100, item, descricao, data }) }
     catch (err) { setErro(err.message); setBusy(false) }
   }
 
@@ -33,10 +32,7 @@ export default function FormGasto({ titulo, inicial, comData, onFechar, onSalvar
         <h3>{titulo}</h3>
         <div className="field">
           <label>Valor</label>
-          <div className="money-field">
-            <span>R$</span>
-            <input className="money" inputMode="decimal" placeholder="0,00" autoFocus value={valor} onChange={(e) => setValor(e.target.value)} />
-          </div>
+          <CampoValor centavos={centavos} onChange={setCentavos} autoFocus />
         </div>
         <div className="field">
           <label>Item</label>
