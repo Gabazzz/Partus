@@ -162,6 +162,7 @@ export default function Home({ eu, token, moradores, onSair, onExpirou, onMorado
     return Object.entries(mapa).sort((a, b) => b[1] - a[1])
   }, [lista])
   const temFixas = (lista || []).some((d) => d.tipo === 'fixa')
+  const totalFixas = (lista || []).filter((d) => d.tipo === 'fixa').reduce((s, d) => s + Number(d.valor), 0)
   const sugestoesItens = useMemo(() => {
     const base = ['Mercado', 'Feira', 'Gás', 'Internet', 'Energia', 'Aluguel']
     const contagem = new Map()
@@ -197,7 +198,7 @@ export default function Home({ eu, token, moradores, onSair, onExpirou, onMorado
     } catch (e) { tratar(e) }
   }
   async function copiarMensagem() {
-    const texto = mensagemCobranca({ nomeMes, total, parte: (total * 2) / 3 })
+    const texto = mensagemCobranca({ nomeMes, total, parte: (total * 2) / 3, fixas: totalFixas, variavel: total - totalFixas })
     avisar((await copiarTexto(texto)) ? 'Mensagem copiada!' : 'Não consegui copiar automaticamente')
   }
 

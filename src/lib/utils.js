@@ -25,10 +25,12 @@ export const hojeISO = () => {
 export const brl = (n) => Number(n || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
 // Mensagem pronta pra mandar pra quem paga a outra parte da casa.
-export const mensagemCobranca = ({ nomeMes, total, parte }) =>
-  `Oi! Segue o resumo de ${nomeMes}:\n\n` +
-  `Total da casa: ${brl(total)}\n` +
-  `Sua parte (2/3): ${brl(parte)}\n\n` +
+export const mensagemCobranca = ({ nomeMes, total, parte, fixas, variavel }) =>
+  `Oi! Resumo de ${nomeMes}:\n\n` +
+  `🏠 Total da casa: ${brl(total)}\n` +
+  `   • Fixas (aluguel, internet, energia): ${brl(fixas)}\n` +
+  `   • Mercado e outros: ${brl(variavel)}\n\n` +
+  `💰 Sua parte (2/3): ${brl(parte)}\n\n` +
   `Qualquer dúvida nos valores, me chama! 🙂`
 
 // Copia texto pro clipboard, com fallback pra navegadores/contexto sem permissão.
