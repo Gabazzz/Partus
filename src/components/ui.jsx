@@ -123,7 +123,7 @@ export function Card({ children, className = '', as = 'div', ...rest }) {
  *  atrás do teclado. */
 export function Sheet({ onClose, children, label }) {
   const controls = useDragControls()
-  const [alturaMax, setAlturaMax] = useState(null)
+  const [viewport, setViewport] = useState(null)
 
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose()
@@ -136,10 +136,16 @@ export function Sheet({ onClose, children, label }) {
     }
   }, [onClose])
 
+  // Alinha a overlay exatamente com a área visível real (visualViewport),
+  // que encolhe quando a barra de endereço do navegador aparece ou o
+  // teclado abre — diferente de 100vh/100dvh, que em vários Chrome/Android
+  // consideram a tela "cheia" e deixam o rodapé da folha fora da área
+  // visível. Assim a folha (e seus botões) sempre cabe no que a pessoa
+  // realmente enxerga.
   useEffect(() => {
     const vv = window.visualViewport
     if (!vv) return
-    const atualizar = () => setAlturaMax(Math.round(vv.height * 0.92))
+    const atualizar = () => setViewport({ altura: Math.round(vv.height), topo: Math.round(vv.offsetTop) })
     atualizar()
     vv.addEventListener('resize', atualizar)
     vv.addEventListener('scroll', atualizar)
@@ -152,6 +158,7 @@ export function Sheet({ onClose, children, label }) {
   return (
     <motion.div
       className="overlay"
+      style={viewport ? { top: viewport.topo, height: viewport.altura } : undefined}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -162,7 +169,7 @@ export function Sheet({ onClose, children, label }) {
         className="sheet"
         role="dialog"
         aria-label={label}
-        style={alturaMax ? { maxHeight: alturaMax } : undefined}
+        style={viewport ? { maxHeight: Math.round(viewport.altura * 0.92) } : undefined}
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
