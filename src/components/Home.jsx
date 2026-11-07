@@ -26,6 +26,8 @@ function Esqueleto() {
 
 export default function Home({ eu, token, moradores, onSair, onExpirou, onMoradoresMudou }) {
   const admin = eu.is_admin
+  const podeVerTudo = admin || !!eu.pode_ver_tudo
+  const somenteVisualiza = podeVerTudo && !admin
   const hoje = useMemo(() => new Date(), [])
   const [ano, setAno] = useState(hoje.getFullYear())
   const [mes, setMes] = useState(hoje.getMonth())
@@ -210,7 +212,7 @@ export default function Home({ eu, token, moradores, onSair, onExpirou, onMorado
       <header className="top">
         <div className="me">
           <Avatar m={eu} size={44} ring />
-          <div><small>{admin ? 'Administrador' : 'Perfil'}</small><strong>{eu.nome}</strong></div>
+          <div><small>{admin ? 'Administrador' : eu.pode_ver_tudo ? 'Só visualiza' : 'Perfil'}</small><strong>{eu.nome}</strong></div>
         </div>
         <div className="top-actions">
           {pendentes > 0 && (
@@ -269,7 +271,7 @@ export default function Home({ eu, token, moradores, onSair, onExpirou, onMorado
       {lista && (
         <motion.div className={`content ${carregando ? 'busy' : ''}`} initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.07 } } }}>
           <Card className="hero" variants={fadeUp}>
-            <small>{admin ? 'Total da casa no mês' : 'Você lançou no mês'}</small>
+            <small>{podeVerTudo ? 'Total da casa no mês' : 'Você lançou no mês'}</small>
             <p className="big"><Money value={total} /></p>
             <div className="shine" />
           </Card>
@@ -326,7 +328,7 @@ export default function Home({ eu, token, moradores, onSair, onExpirou, onMorado
             </>
           )}
 
-          {admin && (
+          {podeVerTudo && (
             <>
               <div className="split">
                 <Card className="mine" variants={fadeUp}>
@@ -338,10 +340,12 @@ export default function Home({ eu, token, moradores, onSair, onExpirou, onMorado
                   <b><Money value={(total * 2) / 3} duration={1.3} /></b>
                 </Card>
               </div>
-              <motion.button type="button" className="chip gold copy-msg" variants={fadeUp} onClick={copiarMensagem}>
-                <span aria-hidden="true">⧉</span> Copiar mensagem pra sogra
-              </motion.button>
-              {!fechado && (
+              {admin && (
+                <motion.button type="button" className="chip gold copy-msg" variants={fadeUp} onClick={copiarMensagem}>
+                  <span aria-hidden="true">⧉</span> Copiar mensagem pra sogra
+                </motion.button>
+              )}
+              {admin && !fechado && (
                 <motion.button type="button" className="chip subtle fechar-mes" variants={fadeUp} onClick={fecharMes}>
                   🔒 Marcar mês como acertado
                 </motion.button>
@@ -400,7 +404,9 @@ export default function Home({ eu, token, moradores, onSair, onExpirou, onMorado
               {lista.length === 0 && (
                 <div className="empty-state">
                   <p className="empty">Nenhum gasto neste mês.</p>
-                  <Btn type="button" variant="sec" onClick={() => setNovo(true)}>Lançar gasto</Btn>
+                  {!somenteVisualiza && (
+                    <Btn type="button" variant="sec" onClick={() => setNovo(true)}>Lançar gasto</Btn>
+                  )}
                 </div>
               )}
               {lista.map((d, i) => {
@@ -431,13 +437,15 @@ export default function Home({ eu, token, moradores, onSair, onExpirou, onMorado
         </motion.div>
       )}
 
-      <motion.button
-        className="fab" aria-label="Adicionar gasto"
-        initial={{ scale: 0, rotate: -90 }} animate={{ scale: 1, rotate: 0 }}
-        transition={{ type: 'spring', stiffness: 260, damping: 18, delay: 0.5 }}
-        whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.92 }}
-        onClick={() => hojeFechado ? avisar('Mês fechado. Peça pro administrador reabrir.', 'erro') : setNovo(true)}
-      >+</motion.button>
+      {!somenteVisualiza && (
+        <motion.button
+          className="fab" aria-label="Adicionar gasto"
+          initial={{ scale: 0, rotate: -90 }} animate={{ scale: 1, rotate: 0 }}
+          transition={{ type: 'spring', stiffness: 260, damping: 18, delay: 0.5 }}
+          whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.92 }}
+          onClick={() => hojeFechado ? avisar('Mês fechado. Peça pro administrador reabrir.', 'erro') : setNovo(true)}
+        >+</motion.button>
+      )}
 
       <AnimatePresence>
         {novo && (

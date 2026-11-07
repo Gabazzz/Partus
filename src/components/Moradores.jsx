@@ -13,6 +13,7 @@ function Editor({ morador, token, onVoltar, onSalvo, onExpirou }) {
   const [avatar, setAvatar] = useState(morador?.avatar || '')
   const [foto, setFoto] = useState(null)            // nova foto (data URL) escolhida agora
   const [removerFoto, setRemoverFoto] = useState(false)
+  const [visualizador, setVisualizador] = useState(!!morador?.pode_ver_tudo)
   const [confirmando, setConfirmando] = useState(false)
   const [erro, setErro] = useState('')
   const [busy, setBusy] = useState(false)
@@ -40,7 +41,7 @@ function Editor({ morador, token, onVoltar, onSalvo, onExpirou }) {
     if (!nome.trim()) return setErro('Informe o nome')
     setBusy(true); setErro('')
     try {
-      await api.salvarMorador(token, { id: morador?.id, nome: nome.trim(), avatar, foto, removerFoto })
+      await api.salvarMorador(token, { id: morador?.id, nome: nome.trim(), avatar, foto, removerFoto, visualizador })
       await onSalvo(novo ? 'Morador criado' : 'Morador atualizado')
     } catch (err) { tratar(err) }
   }
@@ -91,6 +92,20 @@ function Editor({ morador, token, onVoltar, onSalvo, onExpirou }) {
         </div>
       </div>
 
+      {!morador?.is_admin && (
+        <motion.button
+          type="button" className={`toggle-ver-tudo ${visualizador ? 'on' : ''}`}
+          onClick={() => setVisualizador((v) => !v)}
+        >
+          <span className="toggle-ico" aria-hidden="true">👁️</span>
+          <span className="toggle-texto">
+            <b>Só visualizar</b>
+            <small>Vê o total da casa e o histórico, mas não lança nem edita gastos. Pra quem ajuda a pagar sem morar aqui (ex.: sogra).</small>
+          </span>
+          <span className={`toggle-switch ${visualizador ? 'on' : ''}`} aria-hidden="true" />
+        </motion.button>
+      )}
+
       {erro && <p className="err">{erro}</p>}
       <Btn disabled={busy}>{busy ? 'Salvando…' : 'Salvar'}</Btn>
       {podeExcluir && (
@@ -136,7 +151,7 @@ export default function Moradores({ moradores, token, onFechar, onMudou, onExpir
                   <Avatar m={m} size={48} />
                   <div className="info">
                     <b>{m.nome}</b>
-                    <small>{m.is_admin ? 'Administrador' : 'Morador'}</small>
+                    <small>{m.is_admin ? 'Administrador' : m.pode_ver_tudo ? 'Só visualiza' : 'Morador'}</small>
                   </div>
                   <span className="chev">›</span>
                 </motion.button>

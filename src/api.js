@@ -35,7 +35,7 @@ export const api = {
   reabrirMes: (token, mes) => rpc('reabrir_mes', { p_token: token, p_mes: mes }),
 
   // Gestão de moradores (somente admin)
-  salvarMorador: (token, { id, nome, avatar, foto, removerFoto }) =>
+  salvarMorador: (token, { id, nome, avatar, foto, removerFoto, visualizador }) =>
     rpc('admin_salvar_morador', {
       p_token: token,
       p_id: id ? String(id) : null,
@@ -43,6 +43,7 @@ export const api = {
       p_avatar: avatar || null,
       p_foto: foto || null,
       p_remover_foto: !!removerFoto,
+      p_visualizador: visualizador == null ? null : !!visualizador,
     }),
   excluirMorador: (token, id) => rpc('admin_excluir_morador', { p_token: token, p_id: String(id) }),
 

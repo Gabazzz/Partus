@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { animate, motion, useDragControls, useReducedMotion } from 'framer-motion'
 import { partesMoeda } from '../lib/utils.js'
 
@@ -116,9 +116,14 @@ export function Card({ children, className = '', as = 'div', ...rest }) {
   )
 }
 
-/** Folha deslizante (bottom sheet) com mola e arrasto pelo puxador. */
+/** Folha deslizante (bottom sheet) com mola e arrasto pelo puxador.
+ *  A altura máxima acompanha o visualViewport (não o viewport "de layout"),
+ *  então quando o teclado do celular abre, a folha encolhe pra caber no
+ *  espaço que sobrou em vez de deixar o rodapé (Salvar/Excluir) escondido
+ *  atrás do teclado. */
 export function Sheet({ onClose, children, label }) {
   const controls = useDragControls()
+  const [alturaMax, setAlturaMax] = useState(null)
 
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose()
@@ -130,6 +135,19 @@ export function Sheet({ onClose, children, label }) {
       document.body.style.overflow = prev
     }
   }, [onClose])
+
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+    const atualizar = () => setAlturaMax(Math.round(vv.height * 0.92))
+    atualizar()
+    vv.addEventListener('resize', atualizar)
+    vv.addEventListener('scroll', atualizar)
+    return () => {
+      vv.removeEventListener('resize', atualizar)
+      vv.removeEventListener('scroll', atualizar)
+    }
+  }, [])
 
   return (
     <motion.div
@@ -144,6 +162,7 @@ export function Sheet({ onClose, children, label }) {
         className="sheet"
         role="dialog"
         aria-label={label}
+        style={alturaMax ? { maxHeight: alturaMax } : undefined}
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
         exit={{ y: '100%' }}

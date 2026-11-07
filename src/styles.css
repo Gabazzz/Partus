@@ -277,6 +277,18 @@ button.row:hover { border-color: rgba(217, 180, 95, 0.4); background: var(--surf
 .emoji:hover { transform: translateY(-2px); }
 .emoji.on { border-color: var(--gold-2); background: rgba(217, 180, 95, 0.16); box-shadow: 0 0 0 3px rgba(217, 180, 95, 0.12); }
 
+/* ---------- Toggle "só visualizar" ---------- */
+.toggle-ver-tudo { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 14px; transition: border-color 0.25s, background 0.25s; }
+.toggle-ver-tudo.on { border-color: rgba(217, 180, 95, 0.4); background: var(--surface-2); }
+.toggle-ico { font-size: 20px; flex: none; }
+.toggle-texto { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.toggle-texto b { font-size: 14px; font-weight: 600; }
+.toggle-texto small { color: var(--muted); font-size: 12px; line-height: 1.4; }
+.toggle-switch { flex: none; width: 42px; height: 25px; border-radius: 99px; background: var(--surface-2); border: 1px solid var(--border); position: relative; transition: background 0.25s, border-color 0.25s; }
+.toggle-switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 19px; height: 19px; border-radius: 50%; background: var(--muted); transition: transform 0.25s var(--ease), background 0.25s; }
+.toggle-switch.on { background: rgba(217, 180, 95, 0.25); border-color: rgba(217, 180, 95, 0.5); }
+.toggle-switch.on::after { transform: translateX(17px); background: var(--gold-1); }
+
 /* ---------- Toast ---------- */
 .toast { position: fixed; top: calc(16px + env(safe-area-inset-top)); left: 0; right: 0; margin: 0 auto; width: fit-content; max-width: calc(100% - 32px); text-align: center; background: rgba(24, 24, 34, 0.92); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid rgba(217, 180, 95, 0.4); padding: 12px 16px; border-radius: 99px; font-size: 14px; font-weight: 500; z-index: 30; box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5); display: flex; align-items: center; gap: 8px; }
 .toast.erro { border-color: rgba(255, 122, 133, 0.5); }
