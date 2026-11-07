@@ -49,15 +49,16 @@ export function Money({ value, className = '', duration = 1.15 }) {
 
 /** Campo de valor com teclado numérico próprio — nunca abre o teclado nativo,
  *  então a tela não é empurrada/cortada ao digitar (diferente de um <input>). */
-export function CampoValor({ centavos, onChange, autoFocus }) {
+export function CampoValor({ centavos, onChange, autoFocus, atalhos = [] }) {
   const partes = partesMoeda(centavos / 100)
+  const max = 99999999 // R$ 999.999,99
 
   function digitar(d) {
-    const max = 99999999 // R$ 999.999,99
     const prox = centavos * 10 + d
     onChange(prox > max ? centavos : prox)
   }
   function apagar() { onChange(Math.floor(centavos / 10)) }
+  function somar(reais) { onChange(Math.min(centavos + reais * 100, max)) }
 
   useEffect(() => {
     if (!autoFocus) return
@@ -76,6 +77,15 @@ export function CampoValor({ centavos, onChange, autoFocus }) {
         <span>R$</span>
         <span className="money tnum">{partes.inteiro}<span className="dec">{partes.centavos}</span></span>
       </div>
+      {atalhos.length > 0 && (
+        <div className="valor-atalhos">
+          {atalhos.map((v) => (
+            <motion.button key={v} type="button" whileTap={{ scale: 0.92 }} onClick={() => somar(v)}>
+              +R${v}
+            </motion.button>
+          ))}
+        </div>
+      )}
       <div className="keypad">
         {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => (
           <motion.button key={d} type="button" whileTap={{ scale: 0.9 }} onClick={() => digitar(d)}>{d}</motion.button>

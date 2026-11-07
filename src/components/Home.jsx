@@ -2,10 +2,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { api } from '../api.js'
 import { brl, copiarTexto, fmtDia, mensagemCobranca, monthStart } from '../lib/utils.js'
+import { filaOffline, pareceSemConexao } from '../lib/offline.js'
 import { Avatar, Btn, Card, Money, ease, fadeUp } from './ui.jsx'
 import FormGasto from './FormGasto.jsx'
 import Moradores from './Moradores.jsx'
 import BotaoInstalar from './BotaoInstalar.jsx'
+
+const MES_ABREV = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
+function iconeCategoria(d) {
+  if (d.tipo === 'fixa') return '📌'
+  return d.categoria === 'mercado' ? '🛒' : '🏷️'
+}
 
 function Esqueleto() {
   return (
@@ -19,7 +26,7 @@ function Esqueleto() {
 
 export default function Home({ eu, token, moradores, onSair, onExpirou, onMoradoresMudou }) {
   const admin = eu.is_admin
-  const hoje = new Date()
+  const hoje = useMemo(() => new Date(), [])
   const [ano, setAno] = useState(hoje.getFullYear())
   const [mes, setMes] = useState(hoje.getMonth())
   const [dir, setDir] = useState(1)
@@ -30,39 +37,121 @@ export default function Home({ eu, token, moradores, onSair, onExpirou, onMorado
   const [editando, setEditando] = useState(null)
   const [gerindo, setGerindo] = useState(false)
   const [verDetalhe, setVerDetalhe] = useState(false)
-  const [toast, setToast] = useState('')
+  const [verHistorico, setVerHistorico] = useState(false)
+  const [historico, setHistorico] = useState(null)
+  const [fechado, setFechado] = useState(false)
+  const [fechadoEm, setFechadoEm] = useState(null)
+  const [hojeFechado, setHojeFechado] = useState(false)
+  const [confirmReabrir, setConfirmReabrir] = useState(false)
+  const [pendentes, setPendentes] = useState(() => filaOffline.tamanho())
+  const [pull, setPull] = useState(0)
+  const [atualizando, setAtualizando] = useState(false)
+  const [toast, setToast] = useState(null)
   const reqId = useRef(0)
+  const pullInicio = useRef(null)
   const emMesAtual = ano === hoje.getFullYear() && mes === hoje.getMonth()
 
   const inicio = monthStart(ano, mes)
   const fim = mes === 11 ? monthStart(ano + 1, 0) : monthStart(ano, mes + 1)
+  const hojeInicio = monthStart(hoje.getFullYear(), hoje.getMonth())
 
   const carregar = useCallback(async () => {
     const id = ++reqId.current
     setCarregando(true)
     try {
       setErro('')
-      const dados = await api.despesas(eu.id, token, inicio, fim)
-      if (id === reqId.current) setLista(dados)
+      const [dados, infoMes, infoHoje] = await Promise.all([
+        api.despesas(eu.id, token, inicio, fim),
+        api.mesInfo(inicio),
+        emMesAtual ? null : api.mesInfo(hojeInicio),
+      ])
+      if (id !== reqId.current) return
+      setLista(dados)
+      const linha = infoMes?.[0]
+      setFechado(!!linha?.fechado); setFechadoEm(linha?.fechado_em || null)
+      setHojeFechado(emMesAtual ? !!linha?.fechado : !!infoHoje?.[0]?.fechado)
     } catch (e) {
       if (id === reqId.current) setErro(e.message)
     } finally {
       if (id === reqId.current) setCarregando(false)
     }
-  }, [eu.id, token, inicio, fim])
+  }, [eu.id, token, inicio, fim, emMesAtual, hojeInicio])
   useEffect(() => { carregar() }, [carregar])
 
-  function avisar(t) { setToast(t); setTimeout(() => setToast(''), 2400) }
+  const carregarHistorico = useCallback(() => {
+    api.historico(eu.id, token, 6).then(setHistorico).catch(() => {})
+  }, [eu.id, token])
+  useEffect(() => { carregarHistorico() }, [carregarHistorico])
+
+  const sincronizarFila = useCallback(async () => {
+    if (!filaOffline.tamanho()) return
+    const { enviados, falharam } = await filaOffline.sincronizar(api)
+    setPendentes(filaOffline.tamanho())
+    if (enviados) { avisar(`${enviados} gasto${enviados > 1 ? 's' : ''} sincronizado${enviados > 1 ? 's' : ''}`); carregar(); carregarHistorico() }
+    if (falharam.length) avisar(`${falharam.length} gasto(s) não puderam ser enviados`, 'erro')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [carregar, carregarHistorico])
+  useEffect(() => {
+    sincronizarFila()
+    window.addEventListener('online', sincronizarFila)
+    return () => window.removeEventListener('online', sincronizarFila)
+  }, [sincronizarFila])
+
+  function avisar(t, tipo = 'ok') {
+    setToast({ texto: t, tipo })
+    setTimeout(() => setToast(null), 2400)
+    if (tipo === 'ok' && navigator.vibrate) { try { navigator.vibrate(15) } catch {} }
+  }
   function mudaMes(d) {
     setDir(d)
     const dt = new Date(ano, mes + d, 1)
     setAno(dt.getFullYear()); setMes(dt.getMonth())
   }
-  function irParaHoje() {
-    const alvo = new Date(hoje.getFullYear(), hoje.getMonth(), 1)
+  function irParaMes(mesISO) {
+    const [ay, am] = mesISO.split('-').map(Number)
+    const alvo = new Date(ay, am - 1, 1)
     const atual = new Date(ano, mes, 1)
     setDir(alvo > atual ? 1 : -1)
-    setAno(hoje.getFullYear()); setMes(hoje.getMonth())
+    setAno(alvo.getFullYear()); setMes(alvo.getMonth())
+  }
+  function irParaHoje() { irParaMes(hojeInicio) }
+
+  async function fecharMes() {
+    try {
+      await api.fecharMes(token, inicio)
+      setFechado(true); setFechadoEm(new Date().toISOString())
+      if (emMesAtual) setHojeFechado(true)
+      avisar('Mês marcado como acertado')
+    } catch (e) { tratar(e) }
+  }
+  async function reabrirMes() {
+    if (!confirmReabrir) { setConfirmReabrir(true); setTimeout(() => setConfirmReabrir(false), 3500); return }
+    try {
+      await api.reabrirMes(token, inicio)
+      setFechado(false); setFechadoEm(null); setConfirmReabrir(false)
+      if (emMesAtual) setHojeFechado(false)
+      avisar('Mês reaberto')
+    } catch (e) { tratar(e) }
+  }
+
+  function onPullStart(e) {
+    if (novo || editando || gerindo || window.scrollY > 0) return
+    pullInicio.current = e.touches[0].clientY
+  }
+  function onPullMove(e) {
+    if (pullInicio.current == null) return
+    const delta = e.touches[0].clientY - pullInicio.current
+    if (delta > 0 && window.scrollY <= 0) setPull(Math.min(delta, 90))
+  }
+  async function onPullEnd() {
+    if (pullInicio.current == null) return
+    pullInicio.current = null
+    if (pull > 60) {
+      setAtualizando(true)
+      await Promise.all([carregar(), carregarHistorico()])
+      setAtualizando(false)
+    }
+    setPull(0)
   }
   const nomeMes = new Date(ano, mes, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
 
@@ -98,13 +187,13 @@ export default function Home({ eu, token, moradores, onSair, onExpirou, onMorado
 
   function tratar(e) {
     if (e.message.includes('Sem permissão')) onExpirou()
-    else avisar(e.message)
+    else avisar(e.message, 'erro')
   }
   async function gerarFixas() {
     try {
       const n = await api.gerarFixas(token, inicio)
       avisar(n ? `${n} despesas fixas lançadas` : 'Fixas já estavam lançadas')
-      carregar()
+      carregar(); carregarHistorico()
     } catch (e) { tratar(e) }
   }
   async function copiarMensagem() {
@@ -113,13 +202,19 @@ export default function Home({ eu, token, moradores, onSair, onExpirou, onMorado
   }
 
   return (
-    <div className="app">
+    <div className="app" onTouchStart={onPullStart} onTouchMove={onPullMove} onTouchEnd={onPullEnd}>
+      <div className="pull-indicator" style={{ height: atualizando ? 48 : Math.min(pull, 60), opacity: atualizando ? 1 : Math.min(pull / 50, 1) }}>
+        <span className={atualizando ? 'spin' : ''} style={!atualizando ? { transform: `rotate(${Math.min(pull * 3, 180)}deg)` } : undefined}>↻</span>
+      </div>
       <header className="top">
         <div className="me">
           <Avatar m={eu} size={44} ring />
           <div><small>{admin ? 'Administrador' : 'Perfil'}</small><strong>{eu.nome}</strong></div>
         </div>
         <div className="top-actions">
+          {pendentes > 0 && (
+            <button type="button" className="chip pendentes-chip" onClick={sincronizarFila}>⏳ {pendentes} pendente{pendentes > 1 ? 's' : ''}</button>
+          )}
           {admin && <button className="chip gold" onClick={() => setGerindo(true)}>Moradores</button>}
           <button className="ghost" onClick={onSair}>Trocar perfil</button>
         </div>
@@ -150,6 +245,21 @@ export default function Home({ eu, token, moradores, onSair, onExpirou, onMorado
             >Hoje</motion.button>
           )}
         </AnimatePresence>
+        <AnimatePresence>
+          {fechado && (
+            <motion.div
+              key="fechado" className="mes-fechado-badge"
+              initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+            >
+              <span>🔒 Mês fechado{fechadoEm ? ` em ${fmtDia(fechadoEm.slice(0, 10))}` : ''}</span>
+              {admin && (
+                <button type="button" className="link" onClick={reabrirMes}>
+                  {confirmReabrir ? 'Toque de novo' : 'Reabrir'}
+                </button>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {erro && <p className="err">{erro}</p>}
@@ -162,6 +272,58 @@ export default function Home({ eu, token, moradores, onSair, onExpirou, onMorado
             <p className="big"><Money value={total} /></p>
             <div className="shine" />
           </Card>
+
+          {historico && historico.some((h) => h.total > 0) && (
+            <>
+              <motion.button
+                type="button" className="chip subtle detail-toggle" variants={fadeUp}
+                onClick={() => setVerHistorico((v) => !v)}
+              >
+                {verHistorico ? 'Ocultar histórico' : 'Ver histórico'}
+                <span className={`chev ${verHistorico ? 'open' : ''}`} aria-hidden="true">›</span>
+              </motion.button>
+              <AnimatePresence initial={false}>
+                {verHistorico && (
+                  <motion.div
+                    key="hist-wrap" style={{ overflow: 'hidden' }}
+                    initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.35, ease }}
+                  >
+                    <Card className="historico">
+                      <small className="cap">Últimos {historico.length} meses</small>
+                      <div className="historico-bars">
+                        {(() => {
+                          const max = Math.max(...historico.map((h) => h.total), 1)
+                          return historico.map((h, i) => {
+                            const d = new Date(h.mes + 'T00:00:00')
+                            const atual = h.mes === inicio
+                            return (
+                              <motion.button
+                                type="button" key={h.mes}
+                                className={`historico-col ${atual ? 'atual' : ''}`}
+                                onClick={() => irParaMes(h.mes)}
+                                aria-label={`${MES_ABREV[d.getMonth()]}: ${brl(h.total)}`}
+                                whileTap={{ scale: 0.92 }}
+                              >
+                                <div className="historico-bar">
+                                  <motion.i
+                                    initial={{ height: 0 }}
+                                    animate={{ height: `${(h.total / max) * 100}%` }}
+                                    transition={{ duration: 0.7, ease, delay: i * 0.06 }}
+                                  />
+                                </div>
+                                <span className="historico-mes">{MES_ABREV[d.getMonth()]}</span>
+                              </motion.button>
+                            )
+                          })
+                        })()}
+                      </div>
+                    </Card>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </>
+          )}
 
           {admin && (
             <>
@@ -178,6 +340,11 @@ export default function Home({ eu, token, moradores, onSair, onExpirou, onMorado
               <motion.button type="button" className="chip gold copy-msg" variants={fadeUp} onClick={copiarMensagem}>
                 <span aria-hidden="true">⧉</span> Copiar mensagem pra sogra
               </motion.button>
+              {!fechado && (
+                <motion.button type="button" className="chip subtle fechar-mes" variants={fadeUp} onClick={fecharMes}>
+                  🔒 Marcar mês como acertado
+                </motion.button>
+              )}
               {porMorador.length > 0 && (
                 <>
                   <motion.button
@@ -220,7 +387,7 @@ export default function Home({ eu, token, moradores, onSair, onExpirou, onMorado
 
           <motion.div className="section-title" variants={fadeUp}>
             <span>Lançamentos</span>
-            {admin && !temFixas && <button className="chip gold" onClick={gerarFixas}>+ Lançar fixas do mês</button>}
+            {admin && !temFixas && !fechado && <button className="chip gold" onClick={gerarFixas}>+ Lançar fixas do mês</button>}
           </motion.div>
 
           <AnimatePresence mode="wait" initial={false}>
@@ -236,23 +403,24 @@ export default function Home({ eu, token, moradores, onSair, onExpirou, onMorado
                 </div>
               )}
               {lista.map((d, i) => {
-                const Tag = admin ? motion.button : motion.div
+                const editavel = admin && !fechado
+                const Tag = editavel ? motion.button : motion.div
                 return (
                   <Tag
                     key={d.id} className="row"
                     initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.4, ease, delay: Math.min(i, 12) * 0.035 }}
-                    whileHover={admin ? { x: 3 } : undefined}
-                    whileTap={admin ? { scale: 0.985 } : undefined}
-                    onClick={admin ? () => setEditando(d) : undefined}
+                    whileHover={editavel ? { x: 3 } : undefined}
+                    whileTap={editavel ? { scale: 0.985 } : undefined}
+                    onClick={editavel ? () => setEditando(d) : undefined}
                   >
                     <Avatar m={fotoDe(d.morador_nome) || { nome: d.morador_nome }} size={38} />
                     <div className="info">
-                      <b>{d.item}{d.tipo === 'fixa' && <span className="tag">fixa</span>}</b>
+                      <b><span className="cat-ico" aria-hidden="true">{iconeCategoria(d)}</span>{d.item}{d.tipo === 'fixa' && <span className="tag">fixa</span>}</b>
                       <small>{fmtDia(d.data)} · {d.morador_nome}{d.descricao ? ` · ${d.descricao}` : ''}</small>
                     </div>
                     <span className="val tnum">{brl(d.valor)}</span>
-                    {admin && <span className="row-edit" aria-hidden="true">✎</span>}
+                    {editavel && <span className="row-edit" aria-hidden="true">✎</span>}
                   </Tag>
                 )
               })}
@@ -267,7 +435,7 @@ export default function Home({ eu, token, moradores, onSair, onExpirou, onMorado
         initial={{ scale: 0, rotate: -90 }} animate={{ scale: 1, rotate: 0 }}
         transition={{ type: 'spring', stiffness: 260, damping: 18, delay: 0.5 }}
         whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.92 }}
-        onClick={() => setNovo(true)}
+        onClick={() => hojeFechado ? avisar('Mês fechado. Peça pro administrador reabrir.', 'erro') : setNovo(true)}
       >+</motion.button>
 
       <AnimatePresence>
@@ -276,8 +444,15 @@ export default function Home({ eu, token, moradores, onSair, onExpirou, onMorado
             key="novo" titulo="Novo gasto" sugestoes={sugestoesItens}
             onFechar={() => setNovo(false)}
             onSalvar={async (f) => {
-              await api.adicionar(eu.id, f.item, f.valor, f.descricao, null)
-              setNovo(false); avisar('Gasto lançado'); carregar()
+              try {
+                await api.adicionar(eu.id, f.item, f.valor, f.descricao, null, f.categoria)
+                setNovo(false); avisar('Gasto lançado'); carregar(); carregarHistorico()
+              } catch (e) {
+                if (!pareceSemConexao(e.message)) throw e
+                filaOffline.adicionar({ morador: eu.id, item: f.item, valor: f.valor, descricao: f.descricao, data: null, categoria: f.categoria })
+                setPendentes(filaOffline.tamanho())
+                setNovo(false); avisar('Sem conexão — gasto salvo e será enviado automaticamente')
+              }
             }}
           />
         )}
@@ -286,14 +461,14 @@ export default function Home({ eu, token, moradores, onSair, onExpirou, onMorado
             key="editar" titulo="Editar gasto" inicial={editando} comData
             onFechar={() => setEditando(null)}
             onSalvar={async (f) => {
-              try { await api.editar(token, editando.id, f.item, f.valor, f.descricao, f.data) }
+              try { await api.editar(token, editando.id, f.item, f.valor, f.descricao, f.data, f.categoria) }
               catch (e) { setEditando(null); return tratar(e) }
-              setEditando(null); avisar('Atualizado'); carregar()
+              setEditando(null); avisar('Atualizado'); carregar(); carregarHistorico()
             }}
             onExcluir={async () => {
               try { await api.excluir(token, editando.id) }
               catch (e) { setEditando(null); return tratar(e) }
-              setEditando(null); avisar('Excluído'); carregar()
+              setEditando(null); avisar('Excluído'); carregar(); carregarHistorico()
             }}
           />
         )}
@@ -313,10 +488,13 @@ export default function Home({ eu, token, moradores, onSair, onExpirou, onMorado
       <AnimatePresence>
         {toast && (
           <motion.div
-            key={toast} className="toast"
+            key={toast.texto} className={`toast ${toast.tipo === 'erro' ? 'erro' : ''}`}
             initial={{ opacity: 0, y: -20, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -14, scale: 0.95 }}
             transition={{ type: 'spring', stiffness: 400, damping: 28 }}
-          >{toast}</motion.div>
+          >
+            <span className="toast-ico" aria-hidden="true">{toast.tipo === 'erro' ? '⚠' : '✓'}</span>
+            {toast.texto}
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

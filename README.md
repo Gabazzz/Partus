@@ -9,6 +9,11 @@ Webapp de controle de despesas compartilhadas da casa.
 - "Esqueci minha senha" do admin: código de 6 dígitos enviado por e-mail
 - Visual premium: tema escuro com dourado, números animados, transições suaves
 - Instalável (PWA): ícone na tela inicial, abre em tela cheia, visual disponível offline
+- Categoria simples por gasto (Mercado / Outros, além da tag "fixa")
+- Fechamento mensal: admin marca o mês como "acertado" com a sogra, travando novos lançamentos/edições naquele mês (pode reabrir se precisar corrigir)
+- Histórico dos últimos 6 meses (mini gráfico), toca numa barra pra ir direto naquele mês
+- Lança gasto sem internet: fica numa fila local e é enviado sozinho quando a conexão volta
+- Puxar a tela pra baixo atualiza os lançamentos (pull-to-refresh)
 
 ## Instalando no celular ou computador
 
@@ -20,7 +25,7 @@ O app precisa estar publicado em **HTTPS** (Vercel, Netlify, Cloudflare Pages...
    - **iPhone (Safari):** toque em **Compartilhar → Adicionar à Tela de Início**. O botão **Instalar app** mostra o passo a passo.
 3. O app atualiza sozinho quando você publica uma nova versão.
 
-Só o visual fica salvo para uso offline; os lançamentos sempre vêm do Supabase, então precisam de internet.
+O visual fica salvo para uso offline; lançar um gasto sem internet funciona (fica guardado no aparelho e sincroniza sozinho quando a conexão volta), mas ver o histórico e editar/excluir lançamentos precisa de internet.
 
 ## Rodando
 
@@ -56,6 +61,10 @@ supabase functions deploy recuperar-senha
 Usa o [Resend](https://resend.com). Sem domínio verificado, o remetente `onboarding@resend.dev` só entrega para o e-mail dono da conta Resend, então crie a conta com `gabrielbtten@gmail.com` (ou verifique um domínio e troque o `from`).
 
 Segurança do código: só o hash fica no banco, vale 15 minutos, 5 tentativas, 1 pedido por minuto e no máximo 5 por hora.
+
+### 3. Categorias, fechamento mensal e histórico
+
+Rode `supabase/migrations/004_categorias_fechamento_historico.sql` no SQL Editor do Supabase (já aplicada no projeto em produção). Adiciona a coluna `despesas.categoria`, a tabela `meses_fechados` e as funções `historico_meses`, `mes_info`, `fechar_mes`, `reabrir_mes`, além de atualizar `adicionar_despesa`/`editar_despesa`/`excluir_despesa`/`gerar_fixas_mes`/`listar_despesas` pra respeitar mês fechado e categoria.
 
 ## Fotos
 
