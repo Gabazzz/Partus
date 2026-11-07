@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { hojeISO } from '../lib/utils.js'
 import { Btn, CampoValor, Sheet } from './ui.jsx'
 
-export default function FormGasto({ titulo, inicial, comData, onFechar, onSalvar, onExcluir }) {
+export default function FormGasto({ titulo, inicial, comData, sugestoes = [], onFechar, onSalvar, onExcluir }) {
   const [centavos, setCentavos] = useState(inicial ? Math.round(Number(inicial.valor) * 100) : 0)
   const [item, setItem] = useState(inicial?.item || '')
   const [descricao, setDescricao] = useState(inicial?.descricao || '')
@@ -36,6 +36,20 @@ export default function FormGasto({ titulo, inicial, comData, onFechar, onSalvar
         </div>
         <div className="field">
           <label>Item</label>
+          {!inicial && sugestoes.length > 0 && (
+            <div className="chip-row" role="group" aria-label="Itens frequentes">
+              {sugestoes.map((s) => {
+                const ativo = item.trim().toLowerCase() === s.toLowerCase()
+                return (
+                  <motion.button
+                    key={s} type="button" whileTap={{ scale: 0.93 }}
+                    className={`chip ${ativo ? 'gold' : ''}`}
+                    onClick={() => setItem(s)}
+                  >{s}</motion.button>
+                )
+              })}
+            </div>
+          )}
           <input placeholder="Ex.: Mercado, Feira, Gás" value={item} onChange={(e) => setItem(e.target.value)} />
         </div>
         <div className="field">

@@ -96,11 +96,31 @@ button:disabled { cursor: default; }
 .chip.subtle { background: transparent; color: var(--muted); }
 
 /* ---------- Mês ---------- */
-.month { display: flex; align-items: center; justify-content: space-between; margin: 8px 0 18px; }
+.month-bar { display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 8px 0 18px; }
+.month { display: flex; align-items: center; justify-content: space-between; width: 100%; }
 .month > button { width: 42px; height: 42px; border-radius: 14px; background: var(--surface); border: 1px solid var(--border); font-size: 20px; transition: border-color 0.25s, background 0.25s; }
 .month > button:hover { border-color: rgba(217, 180, 95, 0.5); background: var(--surface-2); }
 .month-title { overflow: hidden; }
 .month h2 { margin: 0; font-family: var(--display); font-size: 18px; font-weight: 600; text-transform: capitalize; text-align: center; letter-spacing: -0.01em; }
+.hoje-chip { font-size: 12px; padding: 6px 14px; }
+
+/* ---------- Detalhe colapsável ---------- */
+.detail-toggle { display: flex; align-items: center; justify-content: center; gap: 4px; width: 100%; margin-top: 10px; }
+.detail-toggle .chev { font-size: 15px; transition: transform 0.3s var(--ease); }
+.detail-toggle .chev.open { transform: rotate(90deg); }
+
+/* ---------- Itens frequentes ---------- */
+.chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.chip-row .chip { font-size: 13px; padding: 7px 13px; }
+
+/* ---------- Estado vazio ---------- */
+.empty-state { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 30px 0; }
+.empty-state .empty { padding: 0; }
+.empty-state .btn { max-width: 220px; }
+
+/* ---------- Affordância de edição ---------- */
+.row-edit { color: var(--muted); font-size: 13px; flex: none; transition: color 0.25s; }
+button.row:hover .row-edit { color: var(--gold-1); }
 
 /* ---------- Cards ---------- */
 .content { transition: opacity 0.3s; }

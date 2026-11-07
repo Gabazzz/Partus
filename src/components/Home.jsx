@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { api } from '../api.js'
 import { brl, copiarTexto, fmtDia, mensagemCobranca, monthStart } from '../lib/utils.js'
-import { Avatar, Card, Money, ease, fadeUp } from './ui.jsx'
+import { Avatar, Btn, Card, Money, ease, fadeUp } from './ui.jsx'
 import FormGasto from './FormGasto.jsx'
 import Moradores from './Moradores.jsx'
 import BotaoInstalar from './BotaoInstalar.jsx'
@@ -29,8 +29,10 @@ export default function Home({ eu, token, moradores, onSair, onExpirou, onMorado
   const [novo, setNovo] = useState(false)
   const [editando, setEditando] = useState(null)
   const [gerindo, setGerindo] = useState(false)
+  const [verDetalhe, setVerDetalhe] = useState(false)
   const [toast, setToast] = useState('')
   const reqId = useRef(0)
+  const emMesAtual = ano === hoje.getFullYear() && mes === hoje.getMonth()
 
   const inicio = monthStart(ano, mes)
   const fim = mes === 11 ? monthStart(ano + 1, 0) : monthStart(ano, mes + 1)
@@ -56,6 +58,12 @@ export default function Home({ eu, token, moradores, onSair, onExpirou, onMorado
     const dt = new Date(ano, mes + d, 1)
     setAno(dt.getFullYear()); setMes(dt.getMonth())
   }
+  function irParaHoje() {
+    const alvo = new Date(hoje.getFullYear(), hoje.getMonth(), 1)
+    const atual = new Date(ano, mes, 1)
+    setDir(alvo > atual ? 1 : -1)
+    setAno(hoje.getFullYear()); setMes(hoje.getMonth())
+  }
   const nomeMes = new Date(ano, mes, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
 
   const total = (lista || []).reduce((s, d) => s + Number(d.valor), 0)
@@ -65,6 +73,24 @@ export default function Home({ eu, token, moradores, onSair, onExpirou, onMorado
     return Object.entries(mapa).sort((a, b) => b[1] - a[1])
   }, [lista])
   const temFixas = (lista || []).some((d) => d.tipo === 'fixa')
+  const sugestoesItens = useMemo(() => {
+    const base = ['Mercado', 'Feira', 'Gás', 'Internet', 'Energia', 'Aluguel']
+    const contagem = new Map()
+    for (const d of lista || []) {
+      const nome = (d.item || '').trim()
+      if (nome) contagem.set(nome, (contagem.get(nome) || 0) + 1)
+    }
+    const frequentes = [...contagem.entries()].sort((a, b) => b[1] - a[1]).map(([nome]) => nome)
+    const vistos = new Set()
+    const resultado = []
+    for (const nome of [...frequentes, ...base]) {
+      const chave = nome.toLowerCase()
+      if (vistos.has(chave)) continue
+      vistos.add(chave); resultado.push(nome)
+      if (resultado.length === 8) break
+    }
+    return resultado
+  }, [lista])
   const fotoDe = useMemo(() => {
     const mapa = new Map(moradores.map((m) => [m.nome, m]))
     return (nome) => mapa.get(nome)
@@ -99,18 +125,31 @@ export default function Home({ eu, token, moradores, onSair, onExpirou, onMorado
         </div>
       </header>
 
-      <div className="month">
-        <motion.button whileTap={{ scale: 0.88 }} onClick={() => mudaMes(-1)} aria-label="Mês anterior">‹</motion.button>
-        <div className="month-title">
-          <AnimatePresence mode="wait" initial={false} custom={dir}>
-            <motion.h2
-              key={inicio} custom={dir}
-              initial={{ opacity: 0, x: dir * 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: dir * -24 }}
-              transition={{ duration: 0.22, ease }}
-            >{nomeMes}</motion.h2>
-          </AnimatePresence>
+      <div className="month-bar">
+        <div className="month">
+          <motion.button whileTap={{ scale: 0.88 }} onClick={() => mudaMes(-1)} aria-label="Mês anterior">‹</motion.button>
+          <div className="month-title">
+            <AnimatePresence mode="wait" initial={false} custom={dir}>
+              <motion.h2
+                key={inicio} custom={dir}
+                initial={{ opacity: 0, x: dir * 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: dir * -24 }}
+                transition={{ duration: 0.22, ease }}
+              >{nomeMes}</motion.h2>
+            </AnimatePresence>
+          </div>
+          <motion.button whileTap={{ scale: 0.88 }} onClick={() => mudaMes(1)} aria-label="Próximo mês">›</motion.button>
         </div>
-        <motion.button whileTap={{ scale: 0.88 }} onClick={() => mudaMes(1)} aria-label="Próximo mês">›</motion.button>
+        <AnimatePresence>
+          {!emMesAtual && (
+            <motion.button
+              key="hoje" type="button" className="chip hoje-chip"
+              initial={{ opacity: 0, scale: 0.85, y: -4 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.85, y: -4 }}
+              transition={{ duration: 0.2, ease }}
+              whileTap={{ scale: 0.93 }}
+              onClick={irParaHoje}
+            >Hoje</motion.button>
+          )}
+        </AnimatePresence>
       </div>
 
       {erro && <p className="err">{erro}</p>}
@@ -140,22 +179,41 @@ export default function Home({ eu, token, moradores, onSair, onExpirou, onMorado
                 <span aria-hidden="true">⧉</span> Copiar mensagem pra sogra
               </motion.button>
               {porMorador.length > 0 && (
-                <Card className="bars" variants={fadeUp}>
-                  <small className="cap">Quem lançou</small>
-                  {porMorador.map(([nome, v], i) => (
-                    <div className="bar-row" key={nome}>
-                      <span className="who"><Avatar m={fotoDe(nome) || { nome }} size={26} />{nome}</span>
-                      <div className="bar">
-                        <motion.i
-                          initial={{ width: 0 }}
-                          animate={{ width: `${total ? (v / total) * 100 : 0}%` }}
-                          transition={{ duration: 1.1, ease, delay: 0.25 + i * 0.08 }}
-                        />
-                      </div>
-                      <b className="tnum">{brl(v)}</b>
-                    </div>
-                  ))}
-                </Card>
+                <>
+                  <motion.button
+                    type="button" className="chip subtle detail-toggle" variants={fadeUp}
+                    onClick={() => setVerDetalhe((v) => !v)}
+                  >
+                    {verDetalhe ? 'Ocultar quem lançou' : 'Ver quem lançou'}
+                    <span className={`chev ${verDetalhe ? 'open' : ''}`} aria-hidden="true">›</span>
+                  </motion.button>
+                  <AnimatePresence initial={false}>
+                    {verDetalhe && (
+                      <motion.div
+                        key="bars-wrap" style={{ overflow: 'hidden' }}
+                        initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.35, ease }}
+                      >
+                        <Card className="bars">
+                          <small className="cap">Quem lançou</small>
+                          {porMorador.map(([nome, v], i) => (
+                            <div className="bar-row" key={nome}>
+                              <span className="who"><Avatar m={fotoDe(nome) || { nome }} size={26} />{nome}</span>
+                              <div className="bar">
+                                <motion.i
+                                  initial={{ width: 0 }}
+                                  animate={{ width: `${total ? (v / total) * 100 : 0}%` }}
+                                  transition={{ duration: 1.1, ease, delay: 0.25 + i * 0.08 }}
+                                />
+                              </div>
+                              <b className="tnum">{brl(v)}</b>
+                            </div>
+                          ))}
+                        </Card>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </>
               )}
             </>
           )}
@@ -171,7 +229,12 @@ export default function Home({ eu, token, moradores, onSair, onExpirou, onMorado
               initial={{ opacity: 0, x: dir * 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: dir * -30 }}
               transition={{ duration: 0.28, ease }}
             >
-              {lista.length === 0 && <div className="empty">Nenhum gasto neste mês.</div>}
+              {lista.length === 0 && (
+                <div className="empty-state">
+                  <p className="empty">Nenhum gasto neste mês.</p>
+                  <Btn type="button" variant="sec" onClick={() => setNovo(true)}>Lançar gasto</Btn>
+                </div>
+              )}
               {lista.map((d, i) => {
                 const Tag = admin ? motion.button : motion.div
                 return (
@@ -189,6 +252,7 @@ export default function Home({ eu, token, moradores, onSair, onExpirou, onMorado
                       <small>{fmtDia(d.data)} · {d.morador_nome}{d.descricao ? ` · ${d.descricao}` : ''}</small>
                     </div>
                     <span className="val tnum">{brl(d.valor)}</span>
+                    {admin && <span className="row-edit" aria-hidden="true">✎</span>}
                   </Tag>
                 )
               })}
@@ -209,7 +273,7 @@ export default function Home({ eu, token, moradores, onSair, onExpirou, onMorado
       <AnimatePresence>
         {novo && (
           <FormGasto
-            key="novo" titulo="Novo gasto"
+            key="novo" titulo="Novo gasto" sugestoes={sugestoesItens}
             onFechar={() => setNovo(false)}
             onSalvar={async (f) => {
               await api.adicionar(eu.id, f.item, f.valor, f.descricao, null)
