@@ -169,7 +169,15 @@ export function Sheet({ onClose, children, label }) {
         className="sheet"
         role="dialog"
         aria-label={label}
-        style={viewport ? { maxHeight: Math.round(viewport.altura * 0.92) } : undefined}
+        style={{
+          ...(viewport ? { maxHeight: Math.round(viewport.altura * 0.92) } : null),
+          // O framer-motion aplica touch-action:none automaticamente em
+          // qualquer elemento com `drag` ativo, mesmo com dragListener
+          // desligado — isso bloqueia a rolagem nativa por toque dentro da
+          // folha. Como o arrasto aqui só começa pelo puxador (controls.start),
+          // é seguro liberar a rolagem vertical normal no resto da folha.
+          touchAction: 'pan-y',
+        }}
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
