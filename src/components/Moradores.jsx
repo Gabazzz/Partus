@@ -6,6 +6,14 @@ import { Avatar, Btn, Sheet, ease } from './ui.jsx'
 
 const EMOJIS = ['😀', '😎', '🤓', '🥳', '🦊', '🐱', '🐶', '🌿', '⭐', '🔥', '🎧', '🍀']
 
+function rotuloPermissao(m) {
+  if (m.is_admin) return 'Administrador'
+  const partes = []
+  if (m.pode_ver_tudo) partes.push('vê tudo')
+  if (m.pode_editar_proprios) partes.push('edita o que lançou')
+  return partes.length ? partes.join(' · ') : 'Morador'
+}
+
 function Editor({ morador, token, onVoltar, onSalvo, onExpirou }) {
   const novo = !morador
   const inputFoto = useRef(null)
@@ -14,6 +22,7 @@ function Editor({ morador, token, onVoltar, onSalvo, onExpirou }) {
   const [foto, setFoto] = useState(null)            // nova foto (data URL) escolhida agora
   const [removerFoto, setRemoverFoto] = useState(false)
   const [visualizador, setVisualizador] = useState(!!morador?.pode_ver_tudo)
+  const [editor, setEditor] = useState(!!morador?.pode_editar_proprios)
   const [confirmando, setConfirmando] = useState(false)
   const [erro, setErro] = useState('')
   const [busy, setBusy] = useState(false)
@@ -41,7 +50,7 @@ function Editor({ morador, token, onVoltar, onSalvo, onExpirou }) {
     if (!nome.trim()) return setErro('Informe o nome')
     setBusy(true); setErro('')
     try {
-      await api.salvarMorador(token, { id: morador?.id, nome: nome.trim(), avatar, foto, removerFoto, visualizador })
+      await api.salvarMorador(token, { id: morador?.id, nome: nome.trim(), avatar, foto, removerFoto, visualizador, editor })
       await onSalvo(novo ? 'Morador criado' : 'Morador atualizado')
     } catch (err) { tratar(err) }
   }
@@ -93,17 +102,30 @@ function Editor({ morador, token, onVoltar, onSalvo, onExpirou }) {
       </div>
 
       {!morador?.is_admin && (
-        <motion.button
-          type="button" className={`toggle-ver-tudo ${visualizador ? 'on' : ''}`}
-          onClick={() => setVisualizador((v) => !v)}
-        >
-          <span className="toggle-ico" aria-hidden="true">👁️</span>
-          <span className="toggle-texto">
-            <b>Só visualizar</b>
-            <small>Vê o total da casa e o histórico, mas não lança nem edita gastos. Pra quem ajuda a pagar sem morar aqui (ex.: sogra).</small>
-          </span>
-          <span className={`toggle-switch ${visualizador ? 'on' : ''}`} aria-hidden="true" />
-        </motion.button>
+        <>
+          <motion.button
+            type="button" className={`toggle-ver-tudo ${visualizador ? 'on' : ''}`}
+            onClick={() => setVisualizador((v) => !v)}
+          >
+            <span className="toggle-ico" aria-hidden="true">👁️</span>
+            <span className="toggle-texto">
+              <b>Ver gastos de todos</b>
+              <small>Vê o total da casa, a divisão e o histórico completo, não só o que ela mesma lançou. Pra quem ajuda a pagar sem morar aqui (ex.: sogra).</small>
+            </span>
+            <span className={`toggle-switch ${visualizador ? 'on' : ''}`} aria-hidden="true" />
+          </motion.button>
+          <motion.button
+            type="button" className={`toggle-ver-tudo ${editor ? 'on' : ''}`}
+            onClick={() => setEditor((v) => !v)}
+          >
+            <span className="toggle-ico" aria-hidden="true">✎</span>
+            <span className="toggle-texto">
+              <b>Editar os próprios gastos</b>
+              <small>Pode corrigir valor, item, descrição e categoria do que ela mesma lançou (excluir continua só com o admin).</small>
+            </span>
+            <span className={`toggle-switch ${editor ? 'on' : ''}`} aria-hidden="true" />
+          </motion.button>
+        </>
       )}
 
       {erro && <p className="err">{erro}</p>}
@@ -151,7 +173,7 @@ export default function Moradores({ moradores, token, onFechar, onMudou, onExpir
                   <Avatar m={m} size={48} />
                   <div className="info">
                     <b>{m.nome}</b>
-                    <small>{m.is_admin ? 'Administrador' : m.pode_ver_tudo ? 'Só visualiza' : 'Morador'}</small>
+                    <small>{rotuloPermissao(m)}</small>
                   </div>
                   <span className="chev">›</span>
                 </motion.button>

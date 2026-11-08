@@ -23,8 +23,8 @@ export const api = {
     rpc('listar_despesas', { p_morador: morador, p_token: token, p_inicio: inicio, p_fim: fim }),
   adicionar: (morador, item, valor, descricao, data, categoria) =>
     rpc('adicionar_despesa', { p_morador: morador, p_item: item, p_valor: valor, p_descricao: descricao || null, p_data: data || null, p_categoria: categoria || 'outros' }),
-  editar: (token, id, item, valor, descricao, data, categoria) =>
-    rpc('editar_despesa', { p_token: token, p_id: id, p_item: item, p_valor: valor, p_descricao: descricao || '', p_data: data, p_categoria: categoria || null }),
+  editar: (token, morador, id, item, valor, descricao, data, categoria) =>
+    rpc('editar_despesa', { p_token: token, p_morador: morador, p_id: id, p_item: item, p_valor: valor, p_descricao: descricao || '', p_data: data, p_categoria: categoria || null }),
   excluir: (token, id) => rpc('excluir_despesa', { p_token: token, p_id: id }),
   gerarFixas: (token, mes) => rpc('gerar_fixas_mes', { p_token: token, p_mes: mes }),
 
@@ -35,7 +35,7 @@ export const api = {
   reabrirMes: (token, mes) => rpc('reabrir_mes', { p_token: token, p_mes: mes }),
 
   // Gestão de moradores (somente admin)
-  salvarMorador: (token, { id, nome, avatar, foto, removerFoto, visualizador }) =>
+  salvarMorador: (token, { id, nome, avatar, foto, removerFoto, visualizador, editor }) =>
     rpc('admin_salvar_morador', {
       p_token: token,
       p_id: id ? String(id) : null,
@@ -44,6 +44,7 @@ export const api = {
       p_foto: foto || null,
       p_remover_foto: !!removerFoto,
       p_visualizador: visualizador == null ? null : !!visualizador,
+      p_editor: editor == null ? null : !!editor,
     }),
   excluirMorador: (token, id) => rpc('admin_excluir_morador', { p_token: token, p_id: String(id) }),
 

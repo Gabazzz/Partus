@@ -37,7 +37,8 @@ function Esqueleto() {
 export default function Home({ eu, token, moradores, onSair, onExpirou, onMoradoresMudou }) {
   const admin = eu.is_admin
   const podeVerTudo = admin || !!eu.pode_ver_tudo
-  const somenteVisualiza = podeVerTudo && !admin
+  const podeEditarProprios = admin || !!eu.pode_editar_proprios
+  const somenteVisualiza = podeVerTudo && !admin && !podeEditarProprios
   const hoje = useMemo(() => new Date(), [])
   const [ano, setAno] = useState(hoje.getFullYear())
   const [mes, setMes] = useState(hoje.getMonth())
@@ -222,7 +223,7 @@ export default function Home({ eu, token, moradores, onSair, onExpirou, onMorado
       <header className="top">
         <div className="me">
           <Avatar m={eu} size={44} ring />
-          <div><small>{admin ? 'Administrador' : eu.pode_ver_tudo ? 'Só visualiza' : 'Perfil'}</small><strong>{eu.nome}</strong></div>
+          <div><small>{admin ? 'Administrador' : eu.pode_ver_tudo ? 'Vê tudo' : 'Perfil'}</small><strong>{eu.nome}</strong></div>
         </div>
         <div className="top-actions">
           {pendentes > 0 && (
@@ -420,7 +421,7 @@ export default function Home({ eu, token, moradores, onSair, onExpirou, onMorado
                 </div>
               )}
               {lista.map((d, i) => {
-                const editavel = admin && !fechado
+                const editavel = !fechado && (admin || (podeEditarProprios && String(d.morador_id) === String(eu.id)))
                 const Tag = editavel ? motion.button : motion.div
                 return (
                   <Tag
@@ -485,15 +486,15 @@ export default function Home({ eu, token, moradores, onSair, onExpirou, onMorado
             key="editar" titulo="Editar gasto" inicial={editando} comData
             onFechar={() => setEditando(null)}
             onSalvar={async (f) => {
-              try { await api.editar(token, editando.id, f.item, f.valor, f.descricao, f.data, f.categoria) }
+              try { await api.editar(token, eu.id, editando.id, f.item, f.valor, f.descricao, f.data, f.categoria) }
               catch (e) { setEditando(null); return tratar(e) }
               setEditando(null); avisar('Atualizado'); carregar(); carregarHistorico()
             }}
-            onExcluir={async () => {
+            onExcluir={admin ? async () => {
               try { await api.excluir(token, editando.id) }
               catch (e) { setEditando(null); return tratar(e) }
               setEditando(null); avisar('Excluído'); carregar(); carregarHistorico()
-            }}
+            } : undefined}
           />
         )}
         {gerindo && admin && (
