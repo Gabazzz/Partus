@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { animate, motion, useDragControls, useReducedMotion } from 'framer-motion'
 import { partesMoeda } from '../lib/utils.js'
 
@@ -168,7 +169,14 @@ export function Sheet({ onClose, children, label }) {
     }
   }, [])
 
-  return (
+  // Renderiza direto no <body> via portal. O app inteiro vive dentro de um
+  // motion.div animado (a transição de tela em App.jsx, que usa `y` e
+  // `filter`) — e qualquer transform/filter não-"none" num ancestral vira
+  // o "container de referência" dos descendentes position:fixed. Sem o
+  // portal, a folha ficava fixa em relação a esse ancestral (que rola e se
+  // move junto com a página) em vez de ficar fixa em relação à tela real,
+  // o que fazia ela flutuar ou cortar dependendo da rolagem da lista.
+  return createPortal(
     <motion.div
       className="overlay"
       style={viewport ? { top: viewport.topo, height: viewport.altura } : undefined}
@@ -206,7 +214,8 @@ export function Sheet({ onClose, children, label }) {
         <div className="grabber" onPointerDown={(e) => controls.start(e)} />
         {children}
       </motion.div>
-    </motion.div>
+    </motion.div>,
+    document.body
   )
 }
 
