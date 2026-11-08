@@ -223,7 +223,7 @@ export default function Home({ eu, token, moradores, onSair, onExpirou, onMorado
       <header className="top">
         <div className="me">
           <Avatar m={eu} size={44} ring />
-          <div><small>{admin ? 'Administrador' : eu.pode_ver_tudo ? 'Vê tudo' : 'Perfil'}</small><strong>{eu.nome}</strong></div>
+          <div><small>{admin ? 'Administrador' : eu.pode_ver_tudo ? 'Vê o total da casa' : 'Perfil'}</small><strong>{eu.nome}</strong></div>
         </div>
         <div className="top-actions">
           {pendentes > 0 && (
@@ -339,7 +339,7 @@ export default function Home({ eu, token, moradores, onSair, onExpirou, onMorado
             </>
           )}
 
-          {podeVerTudo && (
+          {admin && (
             <>
               <div className="split">
                 <Card className="mine" variants={fadeUp}>
@@ -351,12 +351,10 @@ export default function Home({ eu, token, moradores, onSair, onExpirou, onMorado
                   <b><Money value={(total * 2) / 3} duration={1.3} /></b>
                 </Card>
               </div>
-              {admin && (
-                <motion.button type="button" className="chip gold copy-msg" variants={fadeUp} onClick={copiarMensagem}>
-                  <span aria-hidden="true">⧉</span> Copiar mensagem pra sogra
-                </motion.button>
-              )}
-              {admin && !fechado && (
+              <motion.button type="button" className="chip gold copy-msg" variants={fadeUp} onClick={copiarMensagem}>
+                <span aria-hidden="true">⧉</span> Copiar mensagem pra sogra
+              </motion.button>
+              {!fechado && (
                 <motion.button type="button" className="chip subtle fechar-mes" variants={fadeUp} onClick={fecharMes}>
                   🔒 Marcar mês como acertado
                 </motion.button>

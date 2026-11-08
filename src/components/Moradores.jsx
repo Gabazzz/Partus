@@ -9,7 +9,7 @@ const EMOJIS = ['😀', '😎', '🤓', '🥳', '🦊', '🐱', '🐶', '🌿', 
 function rotuloPermissao(m) {
   if (m.is_admin) return 'Administrador'
   const partes = []
-  if (m.pode_ver_tudo) partes.push('vê tudo')
+  if (m.pode_ver_tudo) partes.push('vê o total da casa')
   if (m.pode_editar_proprios) partes.push('edita o que lançou')
   return partes.length ? partes.join(' · ') : 'Morador'
 }
@@ -109,8 +109,8 @@ function Editor({ morador, token, onVoltar, onSalvo, onExpirou }) {
           >
             <span className="toggle-ico" aria-hidden="true">👁️</span>
             <span className="toggle-texto">
-              <b>Ver gastos de todos</b>
-              <small>Vê o total da casa, a divisão e o histórico completo, não só o que ela mesma lançou. Pra quem ajuda a pagar sem morar aqui (ex.: sogra).</small>
+              <b>Ver quanto a casa gastou</b>
+              <small>Vê o total gasto no mês e o histórico da casa inteira, não só o que ela mesma lançou. Não mostra a divisão de quem paga quanto. Pra quem ajuda a pagar sem morar aqui (ex.: sogra).</small>
             </span>
             <span className={`toggle-switch ${visualizador ? 'on' : ''}`} aria-hidden="true" />
           </motion.button>
