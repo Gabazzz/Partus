@@ -136,16 +136,27 @@ export function Sheet({ onClose, children, label }) {
     }
   }, [onClose])
 
-  // Alinha a overlay exatamente com a área visível real (visualViewport),
-  // que encolhe quando a barra de endereço do navegador aparece ou o
-  // teclado abre — diferente de 100vh/100dvh, que em vários Chrome/Android
-  // consideram a tela "cheia" e deixam o rodapé da folha fora da área
-  // visível. Assim a folha (e seus botões) sempre cabe no que a pessoa
-  // realmente enxerga.
+  // Só encolhe a folha quando o teclado do celular realmente abre (aí o
+  // visualViewport fica bem menor que o viewport "de layout"). Em telas
+  // instaladas como PWA, o visualViewport pode voltar um valor um pouco
+  // menor que a tela cheia mesmo sem teclado nenhum aberto — se a gente
+  // sempre confiasse nesse valor, a overlay ficava menor que a tela real
+  // e sobrava uma faixa sem o fundo escurecido embaixo da folha. Por isso
+  // só aplicamos o ajuste quando a diferença é grande o bastante pra ser
+  // teclado (e não só a barra de endereço/gesto do sistema).
   useEffect(() => {
     const vv = window.visualViewport
     if (!vv) return
-    const atualizar = () => setViewport({ altura: Math.round(vv.height), topo: Math.round(vv.offsetTop) })
+    const TECLADO_MIN_PX = 150
+    const atualizar = () => {
+      const layoutAltura = window.innerHeight
+      const diferenca = layoutAltura - vv.height
+      if (diferenca > TECLADO_MIN_PX) {
+        setViewport({ altura: Math.round(vv.height), topo: Math.round(vv.offsetTop) })
+      } else {
+        setViewport(null)
+      }
+    }
     atualizar()
     vv.addEventListener('resize', atualizar)
     vv.addEventListener('scroll', atualizar)
