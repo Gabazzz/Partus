@@ -136,33 +136,35 @@ export function Sheet({ onClose, children, label }) {
     }
   }, [onClose])
 
-  // Só encolhe a folha quando o teclado do celular realmente abre (aí o
-  // visualViewport fica bem menor que o viewport "de layout"). Em telas
-  // instaladas como PWA, o visualViewport pode voltar um valor um pouco
-  // menor que a tela cheia mesmo sem teclado nenhum aberto — se a gente
-  // sempre confiasse nesse valor, a overlay ficava menor que a tela real
-  // e sobrava uma faixa sem o fundo escurecido embaixo da folha. Por isso
-  // só aplicamos o ajuste quando a diferença é grande o bastante pra ser
-  // teclado (e não só a barra de endereço/gesto do sistema).
+  // A unidade CSS 100dvh não é confiável em todo WebView/Chrome instalado
+  // como PWA (em alguns ela calcula um valor maior que a área realmente
+  // visível, deixando a folha ancorada abaixo do que a pessoa enxerga e
+  // sem como rolar a página pra alcançar — o scroll da página fica
+  // travado enquanto a folha está aberta). Por isso calculamos a altura
+  // real em JS com window.innerHeight (sempre confiável) e só usamos o
+  // visualViewport pra encolher ainda mais quando o teclado do celular
+  // abre de fato.
   useEffect(() => {
     const vv = window.visualViewport
-    if (!vv) return
     const TECLADO_MIN_PX = 150
     const atualizar = () => {
       const layoutAltura = window.innerHeight
-      const diferenca = layoutAltura - vv.height
-      if (diferenca > TECLADO_MIN_PX) {
+      if (vv && layoutAltura - vv.height > TECLADO_MIN_PX) {
         setViewport({ altura: Math.round(vv.height), topo: Math.round(vv.offsetTop) })
       } else {
-        setViewport(null)
+        setViewport({ altura: layoutAltura, topo: 0 })
       }
     }
     atualizar()
-    vv.addEventListener('resize', atualizar)
-    vv.addEventListener('scroll', atualizar)
+    window.addEventListener('resize', atualizar)
+    window.addEventListener('orientationchange', atualizar)
+    vv && vv.addEventListener('resize', atualizar)
+    vv && vv.addEventListener('scroll', atualizar)
     return () => {
-      vv.removeEventListener('resize', atualizar)
-      vv.removeEventListener('scroll', atualizar)
+      window.removeEventListener('resize', atualizar)
+      window.removeEventListener('orientationchange', atualizar)
+      vv && vv.removeEventListener('resize', atualizar)
+      vv && vv.removeEventListener('scroll', atualizar)
     }
   }, [])
 
