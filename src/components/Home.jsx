@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { api } from '../api.js'
-import { brl, copiarTexto, fmtDia, mensagemCobranca, monthStart } from '../lib/utils.js'
+import { api, supabase } from '../api.js'
+import { brl, copiarTexto, fmtDia, hojeISO, mensagemCobranca, monthStart } from '../lib/utils.js'
 import { filaOffline, pareceSemConexao } from '../lib/offline.js'
 import { Avatar, Btn, Card, Money, ease, fadeUp } from './ui.jsx'
 import FormGasto from './FormGasto.jsx'
@@ -9,9 +9,19 @@ import Moradores from './Moradores.jsx'
 import BotaoInstalar from './BotaoInstalar.jsx'
 
 const MES_ABREV = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
+const ICONES_CATEGORIA = { 'Alimentação': '🍽️', 'Transporte': '🚌', 'Moradia': '🏠', 'Saúde': '⚕️', 'Lazer': '🎉', 'Outros': '🏷️' }
 function iconeCategoria(d) {
   if (d.tipo === 'fixa') return '📌'
-  return d.categoria === 'mercado' ? '🛒' : '🏷️'
+  return ICONES_CATEGORIA[d.categoria] || '🏷️'
+}
+
+// Envia uma cópia do gasto para o Previo (finanças pessoais). Não bloqueia o
+// fluxo principal: o gasto já está salvo no Partus mesmo se isso falhar.
+async function enviarParaPrevio({ morador, valor, item, descricao, data, categoria }) {
+  const { error } = await supabase.functions.invoke('enviar-para-previo', {
+    body: { morador_id: morador, valor, item, descricao, data, categoria },
+  })
+  if (error) throw new Error(error.message || 'Não foi possível enviar ao Previo')
 }
 
 function Esqueleto() {
@@ -451,11 +461,16 @@ export default function Home({ eu, token, moradores, onSair, onExpirou, onMorado
         {novo && (
           <FormGasto
             key="novo" titulo="Novo gasto" sugestoes={sugestoesItens}
+            mostrarIntegracaoPrevio={admin}
             onFechar={() => setNovo(false)}
             onSalvar={async (f) => {
               try {
                 await api.adicionar(eu.id, f.item, f.valor, f.descricao, null, f.categoria)
                 setNovo(false); avisar('Gasto lançado'); carregar(); carregarHistorico()
+                if (f.enviarPrevio) {
+                  enviarParaPrevio({ morador: eu.id, valor: f.valor, item: f.item, descricao: f.descricao, data: hojeISO(), categoria: f.categoria })
+                    .catch((e) => avisar(`Lançado no Partus, mas não no Previo: ${e.message}`, 'erro'))
+                }
               } catch (e) {
                 if (!pareceSemConexao(e.message)) throw e
                 filaOffline.adicionar({ morador: eu.id, item: f.item, valor: f.valor, descricao: f.descricao, data: null, categoria: f.categoria })
