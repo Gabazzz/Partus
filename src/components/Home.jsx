@@ -174,6 +174,22 @@ export default function Home({ eu, token, moradores, onSair, onExpirou, onMorado
     for (const d of lista || []) mapa[d.morador_nome] = (mapa[d.morador_nome] || 0) + Number(d.valor)
     return Object.entries(mapa).sort((a, b) => b[1] - a[1])
   }, [lista])
+  // Quem adianta o dinheiro é sempre quem lança (ninguém escolhe "quem gastou").
+  // Então o acerto é por pessoa: o que EU paguei é o que a sogra me deve 2/3;
+  // o que cada morador pagou do próprio bolso é o que EU devo 1/3 a ele(a).
+  const porMoradorId = useMemo(() => {
+    const mapa = {}
+    for (const d of lista || []) mapa[d.morador_id] = (mapa[d.morador_id] || 0) + Number(d.valor)
+    return mapa
+  }, [lista])
+  const meuTotal = porMoradorId[eu.id] || 0
+  const sograDeve = (meuTotal * 2) / 3
+  const vocesDeve = useMemo(() => (
+    moradores
+      .filter((m) => !m.is_admin)
+      .map((m) => ({ ...m, valor: (porMoradorId[m.id] || 0) / 3 }))
+      .filter((m) => m.valor > 0)
+  ), [moradores, porMoradorId])
   const temFixas = (lista || []).some((d) => d.tipo === 'fixa')
   const totalFixas = (lista || []).filter((d) => d.tipo === 'fixa').reduce((s, d) => s + Number(d.valor), 0)
   const sugestoesItens = useMemo(() => {
@@ -211,7 +227,7 @@ export default function Home({ eu, token, moradores, onSair, onExpirou, onMorado
     } catch (e) { tratar(e) }
   }
   async function copiarMensagem() {
-    const texto = mensagemCobranca({ nomeMes, total, parte: (total * 2) / 3, fixas: totalFixas, variavel: total - totalFixas })
+    const texto = mensagemCobranca({ nomeMes, total: meuTotal, parte: sograDeve, fixas: totalFixas, variavel: meuTotal - totalFixas })
     avisar((await copiarTexto(texto)) ? 'Mensagem copiada!' : 'Não consegui copiar automaticamente')
   }
 
@@ -343,14 +359,25 @@ export default function Home({ eu, token, moradores, onSair, onExpirou, onMorado
             <>
               <div className="split">
                 <Card className="mine" variants={fadeUp}>
-                  <small>Sua parte · 1/3</small>
-                  <b><Money value={total / 3} duration={1.3} /></b>
+                  <small>Você pagou</small>
+                  <b><Money value={meuTotal} duration={1.3} /></b>
                 </Card>
                 <Card variants={fadeUp}>
-                  <small>Sogra · 2/3</small>
-                  <b><Money value={(total * 2) / 3} duration={1.3} /></b>
+                  <small>Sogra te deve · 2/3</small>
+                  <b><Money value={sograDeve} duration={1.3} /></b>
                 </Card>
               </div>
+              {vocesDeve.length > 0 && (
+                <Card className="bars" variants={fadeUp}>
+                  <small className="cap">Você deve (1/3 do que cada um pagou)</small>
+                  {vocesDeve.map((m) => (
+                    <div className="bar-row" key={m.id}>
+                      <span className="who"><Avatar m={m} size={26} />{m.nome}</span>
+                      <b className="tnum">{brl(m.valor)}</b>
+                    </div>
+                  ))}
+                </Card>
+              )}
               <motion.button type="button" className="chip gold copy-msg" variants={fadeUp} onClick={copiarMensagem}>
                 <span aria-hidden="true">⧉</span> Copiar mensagem pra sogra
               </motion.button>

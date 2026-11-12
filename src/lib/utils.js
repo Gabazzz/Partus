@@ -25,9 +25,11 @@ export const hojeISO = () => {
 export const brl = (n) => Number(n || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
 // Mensagem pronta pra mandar pra quem paga a outra parte da casa.
+// "total" aqui é só o que o admin pagou do próprio bolso no mês — o que o
+// cunhado/namorada pagaram direto não entra nessa conta (é acerto à parte).
 export const mensagemCobranca = ({ nomeMes, total, parte, fixas, variavel }) =>
   `Oi! Resumo de ${nomeMes}:\n\n` +
-  `🏠 Total da casa: ${brl(total)}\n` +
+  `🏠 Total que paguei: ${brl(total)}\n` +
   `   • Fixas (aluguel, internet, energia): ${brl(fixas)}\n` +
   `   • Mercado e outros: ${brl(variavel)}\n\n` +
   `💰 Sua parte (2/3): ${brl(parte)}\n\n` +
