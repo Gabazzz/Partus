@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { api, supabase } from '../api.js'
 import { brl, copiarTexto, fmtDia, hojeISO, mensagemCobranca, monthStart } from '../lib/utils.js'
@@ -474,14 +475,22 @@ export default function Home({ eu, token, moradores, onSair, onExpirou, onMorado
         </motion.div>
       )}
 
-      {!somenteVisualiza && (
+      {!somenteVisualiza && createPortal(
+        // Renderiza direto no <body> via portal pelo mesmo motivo do <Sheet>
+        // em ui.jsx: o app vive dentro do motion.div animado da transição de
+        // tela em App.jsx (que usa `y`), e esse transform vira o "container
+        // de referência" de qualquer descendente position:fixed. Sem o
+        // portal, o botão ficava fixo em relação a esse ancestral — que
+        // cresce conforme a lista de gastos cresce — em vez de ficar fixo
+        // em relação à tela real, por isso ele "descia" a cada item novo.
         <motion.button
           className="fab" aria-label="Adicionar gasto"
           initial={{ scale: 0, rotate: -90 }} animate={{ scale: 1, rotate: 0 }}
           transition={{ type: 'spring', stiffness: 260, damping: 18, delay: 0.5 }}
           whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.92 }}
           onClick={() => hojeFechado ? avisar('Mês fechado. Peça pro administrador reabrir.', 'erro') : setNovo(true)}
-        >+</motion.button>
+        >+</motion.button>,
+        document.body
       )}
 
       <AnimatePresence>
