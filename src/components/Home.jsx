@@ -550,18 +550,25 @@ export default function Home({ eu, token, moradores, onSair, onExpirou, onMorado
         )}
       </AnimatePresence>
 
-      <AnimatePresence>
-        {toast && (
-          <motion.div
-            key={toast.texto} className={`toast ${toast.tipo === 'erro' ? 'erro' : ''}`}
-            initial={{ opacity: 0, y: -20, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -14, scale: 0.95 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 28 }}
-          >
-            <span className="toast-ico" aria-hidden="true">{toast.tipo === 'erro' ? '⚠' : '✓'}</span>
-            {toast.texto}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {createPortal(
+        // Mesmo motivo do FAB: sem o portal, o toast fica fixo em relação ao
+        // motion.div animado de App.jsx (que rola junto com a página) em vez
+        // de ficar fixo na tela real — numa lista longa ele some rolando
+        // junto do conteúdo em vez de flutuar no topo.
+        <AnimatePresence>
+          {toast && (
+            <motion.div
+              key={toast.texto} className={`toast ${toast.tipo === 'erro' ? 'erro' : ''}`}
+              initial={{ opacity: 0, y: -20, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -14, scale: 0.95 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+            >
+              <span className="toast-ico" aria-hidden="true">{toast.tipo === 'erro' ? '⚠' : '✓'}</span>
+              {toast.texto}
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </div>
   )
 }
