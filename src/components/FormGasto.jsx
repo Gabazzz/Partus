@@ -15,13 +15,14 @@ export const CATEGORIAS = [
 ]
 const CATEGORIAS_VALIDAS = CATEGORIAS.map((c) => c.v)
 
-export default function FormGasto({ titulo, inicial, comData, sugestoes = [], mostrarIntegracaoPrevio, onFechar, onSalvar, onExcluir }) {
+export default function FormGasto({ titulo, inicial, comData, sugestoes = [], mostrarIntegracaoPrevio, nomeAdmin, onFechar, onSalvar, onExcluir }) {
   const [centavos, setCentavos] = useState(inicial ? Math.round(Number(inicial.valor) * 100) : 0)
   const [item, setItem] = useState(inicial?.item || '')
   const [descricao, setDescricao] = useState(inicial?.descricao || '')
   const [data, setData] = useState(inicial?.data || hojeISO())
   const [categoria, setCategoria] = useState(CATEGORIAS_VALIDAS.includes(inicial?.categoria) ? inicial.categoria : 'Outros')
   const [enviarPrevio, setEnviarPrevio] = useState(false)
+  const [caju, setCaju] = useState(!!inicial?.pago_caju)
   const [erro, setErro] = useState('')
   const [busy, setBusy] = useState(false)
   const [confirmando, setConfirmando] = useState(false)
@@ -31,7 +32,7 @@ export default function FormGasto({ titulo, inicial, comData, sugestoes = [], mo
     if (!(centavos > 0)) return setErro('Informe um valor maior que zero')
     if (!item.trim()) return setErro('Informe o item')
     setBusy(true); setErro('')
-    try { await onSalvar({ valor: centavos / 100, item, descricao, data, categoria, enviarPrevio }) }
+    try { await onSalvar({ valor: centavos / 100, item, descricao, data, categoria, enviarPrevio, caju }) }
     catch (err) { setErro(err.message); setBusy(false) }
   }
 
@@ -90,7 +91,20 @@ export default function FormGasto({ titulo, inicial, comData, sugestoes = [], mo
             <input type="date" value={data} onChange={(e) => setData(e.target.value)} />
           </div>
         )}
-        {mostrarIntegracaoPrevio && inicial?.tipo !== 'fixa' && (
+        {inicial?.tipo !== 'fixa' && (
+          <motion.button
+            type="button" className={`toggle-ver-tudo ${caju ? 'on' : ''}`}
+            onClick={() => setCaju((v) => !v)}
+          >
+            <span className="toggle-ico" aria-hidden="true">🍱</span>
+            <span className="toggle-texto">
+              <b>Pago com Caju</b>
+              <small>{nomeAdmin ? `Saiu do cartão Caju do ${nomeAdmin}. Fica atribuído a ele nas contas, mesmo que outra pessoa esteja lançando.` : 'Saiu do cartão Caju do admin. Fica atribuído a ele nas contas, mesmo que outra pessoa esteja lançando.'}</small>
+            </span>
+            <span className={`toggle-switch ${caju ? 'on' : ''}`} aria-hidden="true" />
+          </motion.button>
+        )}
+        {mostrarIntegracaoPrevio && inicial?.tipo !== 'fixa' && !caju && (
           <motion.button
             type="button" className={`toggle-ver-tudo ${enviarPrevio ? 'on' : ''}`}
             onClick={() => setEnviarPrevio((v) => !v)}

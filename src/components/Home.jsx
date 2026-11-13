@@ -17,9 +17,9 @@ function iconeCategoria(d) {
 
 // Envia uma cópia do gasto para o Previo (finanças pessoais). Não bloqueia o
 // fluxo principal: o gasto já está salvo no Partus mesmo se isso falhar.
-async function enviarParaPrevio({ morador, valor, item, descricao, data, categoria }) {
+async function enviarParaPrevio({ morador, valor, item, descricao, data, categoria, va }) {
   const { error } = await supabase.functions.invoke('enviar-para-previo', {
-    body: { morador_id: morador, valor, item, descricao, data, categoria },
+    body: { morador_id: morador, valor, item, descricao, data, categoria, va: !!va },
   })
   if (error) throw new Error(error.message || 'Não foi possível enviar ao Previo')
 }
@@ -214,6 +214,7 @@ export default function Home({ eu, token, moradores, onSair, onExpirou, onMorado
     const mapa = new Map(moradores.map((m) => [m.nome, m]))
     return (nome) => mapa.get(nome)
   }, [moradores])
+  const adminMorador = useMemo(() => moradores.find((m) => m.is_admin), [moradores])
 
   function tratar(e) {
     if (e.message.includes('Sem permissão')) onExpirou()
@@ -459,7 +460,7 @@ export default function Home({ eu, token, moradores, onSair, onExpirou, onMorado
                   >
                     <Avatar m={fotoDe(d.morador_nome) || { nome: d.morador_nome }} size={38} />
                     <div className="info">
-                      <b><span className="cat-ico" aria-hidden="true">{iconeCategoria(d)}</span>{d.item}{d.tipo === 'fixa' && <span className="tag">fixa</span>}</b>
+                      <b><span className="cat-ico" aria-hidden="true">{iconeCategoria(d)}</span>{d.item}{d.tipo === 'fixa' && <span className="tag">fixa</span>}{d.pago_caju && <span className="tag">🍱 caju</span>}</b>
                       <small>{fmtDia(d.data)} · {d.morador_nome}{d.descricao ? ` · ${d.descricao}` : ''}</small>
                     </div>
                     <span className="val tnum">{brl(d.valor)}</span>
@@ -488,18 +489,22 @@ export default function Home({ eu, token, moradores, onSair, onExpirou, onMorado
           <FormGasto
             key="novo" titulo="Novo gasto" sugestoes={sugestoesItens}
             mostrarIntegracaoPrevio={admin}
+            nomeAdmin={adminMorador?.nome}
             onFechar={() => setNovo(false)}
             onSalvar={async (f) => {
               try {
-                await api.adicionar(eu.id, f.item, f.valor, f.descricao, null, f.categoria)
+                await api.adicionar(eu.id, f.item, f.valor, f.descricao, null, f.categoria, f.caju)
                 setNovo(false); avisar('Gasto lançado'); carregar(); carregarHistorico()
-                if (f.enviarPrevio) {
+                if (f.caju && adminMorador) {
+                  enviarParaPrevio({ morador: adminMorador.id, valor: f.valor, item: f.item, descricao: f.descricao, data: hojeISO(), categoria: f.categoria, va: true })
+                    .catch((e) => avisar(`Lançado no Partus, mas não no Previo: ${e.message}`, 'erro'))
+                } else if (f.enviarPrevio) {
                   enviarParaPrevio({ morador: eu.id, valor: f.valor, item: f.item, descricao: f.descricao, data: hojeISO(), categoria: f.categoria })
                     .catch((e) => avisar(`Lançado no Partus, mas não no Previo: ${e.message}`, 'erro'))
                 }
               } catch (e) {
                 if (!pareceSemConexao(e.message)) throw e
-                filaOffline.adicionar({ morador: eu.id, item: f.item, valor: f.valor, descricao: f.descricao, data: null, categoria: f.categoria })
+                filaOffline.adicionar({ morador: eu.id, item: f.item, valor: f.valor, descricao: f.descricao, data: null, categoria: f.categoria, caju: f.caju })
                 setPendentes(filaOffline.tamanho())
                 setNovo(false); avisar('Sem conexão — gasto salvo e será enviado automaticamente')
               }
@@ -509,9 +514,10 @@ export default function Home({ eu, token, moradores, onSair, onExpirou, onMorado
         {editando && (
           <FormGasto
             key="editar" titulo="Editar gasto" inicial={editando} comData
+            nomeAdmin={adminMorador?.nome}
             onFechar={() => setEditando(null)}
             onSalvar={async (f) => {
-              try { await api.editar(token, eu.id, editando.id, f.item, f.valor, f.descricao, f.data, f.categoria) }
+              try { await api.editar(token, eu.id, editando.id, f.item, f.valor, f.descricao, f.data, f.categoria, f.caju) }
               catch (e) { setEditando(null); return tratar(e) }
               setEditando(null); avisar('Atualizado'); carregar(); carregarHistorico()
             }}

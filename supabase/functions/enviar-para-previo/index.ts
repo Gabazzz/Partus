@@ -1,9 +1,10 @@
 // Edge Function · enviar-para-previo
 // Ponte entre o Partus (despesas da casa) e o Previo (finanças pessoais):
-// quando um gasto é lançado aqui e marcado "Também lançar no Previo", esta
-// função grava uma transação equivalente lá, com o valor CHEIO do gasto
-// (a parte da sogra volta depois por Pix, então o valor integral é o que
-// realmente saiu do bolso até lá).
+// quando um gasto é lançado aqui e marcado "Também lançar no Previo" (ou
+// "Pago com Caju", que sempre envia), esta função grava uma transação
+// equivalente lá, com o valor CHEIO do gasto (a parte da sogra volta depois
+// por Pix, então o valor integral é o que realmente saiu do bolso até lá).
+// `va` marca a transação como paga com o cartão Caju (vale-alimentação).
 //
 // Só funciona para o morador "ponte" abaixo — os demais moradores da casa
 // não têm conta no Previo, então enviar os gastos deles não faria sentido.
@@ -32,7 +33,7 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ erro: 'Método não permitido' }, 405)
 
   try {
-    const { morador_id, valor, item, descricao, data, categoria } = await req.json()
+    const { morador_id, valor, item, descricao, data, categoria, va } = await req.json()
 
     if (String(morador_id) !== MORADOR_PONTE) {
       return json({ erro: 'Integração com o Previo não disponível para este perfil' }, 403)
@@ -53,6 +54,7 @@ Deno.serve(async (req) => {
       description: desc.slice(0, 120),
       value: valorNum,
       recurring: false,
+      va: !!va,
     })
     if (error) return json({ erro: error.message }, 400)
 

@@ -34,7 +34,7 @@ export const filaOffline = {
     let enviados = 0
     for (const item of fila) {
       try {
-        await api.adicionar(item.morador, item.item, item.valor, item.descricao, item.data, item.categoria)
+        await api.adicionar(item.morador, item.item, item.valor, item.descricao, item.data, item.categoria, item.caju)
         enviados++
       } catch (e) {
         if (pareceSemConexao(e.message)) restantes.push(item)
